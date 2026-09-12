@@ -1,0 +1,1135 @@
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let tileW = 0;
+let tileH = 0;
+
+const weaponColors = {
+    sword: "#f0d54a",
+    dagger: "#ff7043",
+    spear: "#55d6ff",
+    bow: "#6fe06f",
+    boom: "#c776ff"
+};
+
+const weaponElements = {
+    sword: document.getElementById("wSword"),
+    dagger: document.getElementById("wDagger"),
+    spear: document.getElementById("wSpear"),
+    bow: document.getElementById("wBow"),
+    boom: document.getElementById("wBoom")
+};
+
+function resize() {
+    const r = canvas.getBoundingClientRect();
+
+    canvas.width =
+        Math.floor(r.width * devicePixelRatio);
+
+    canvas.height =
+        Math.floor(r.height * devicePixelRatio);
+
+    ctx.setTransform(
+        devicePixelRatio,
+        0,
+        0,
+        devicePixelRatio,
+        0,
+        0
+    );
+
+    tileW = r.width / COLS;
+    tileH = r.height / ROWS;
+}
+
+window.addEventListener("resize", resize);
+
+const player = {
+    x: 5,
+    y: 7,
+    moveCooldown: 0
+};
+
+let enemies = [];
+let enemyId = 0;
+
+function enemyAt(x, y) {
+    return enemies.find(
+        e => e.x === x && e.y === y
+    );
+}
+
+function spawnEnemy() {
+    for (let tries = 0; tries < 100; tries++) {
+        const x =
+            2 + Math.floor(
+                Math.random() * (COLS - 4)
+            );
+
+        const y =
+            2 + Math.floor(
+                Math.random() * (ROWS - 4)
+            );
+
+        if (
+            Math.abs(x - player.x) < 3 &&
+            Math.abs(y - player.y) < 3
+        ) continue;
+
+        if (enemyAt(x, y))
+            continue;
+
+        enemies.push({
+            id: enemyId++,
+            x,
+            y,
+            hp: 5,
+            enteredDaggerAt: Infinity
+        });
+
+        return;
+    }
+}
+
+for (let i = 0; i < 14; i++) {
+    spawnEnemy();
+}
+
+function damage(enemy, amount = 1) {
+    if (!enemy) return;
+    enemy.hp -= amount;
+}
+
+function removeDead() {
+    enemies = enemies.filter(
+        e => e.hp > 0
+    );
+
+    while (enemies.length < 14) {
+        spawnEnemy();
+    }
+}
+
+const cooldowns = {
+    sword: 0,
+    dagger: 0,
+    spear: 0,
+    bow: 0,
+    boom: 0
+};
+
+const weaponDelay = {
+    sword: 700,
+    dagger: 350,
+    spear: 700,
+    bow: 900,
+    boom: 1100
+};
+
+function flashWeapon(type) {
+    const el = weaponElements[type];
+
+    el.classList.add("fire");
+
+    setTimeout(() => {
+        el.classList.remove("fire");
+    }, 120);
+}
+
+const attackAnimations = [];
+
+function addAttackAnimation({
+    type,
+    tiles,
+    stepMs,
+    trail = 0,
+    onStep = null,
+    onFinish = null
+}) {
+    attackAnimations.push({
+        type,
+        tiles,
+        stepMs,
+        trail,
+        start: performance.now(),
+        lastStep: -1,
+        onStep,
+        onFinish,
+        finished: false
+    });
+
+    flashWeapon(type);
+}
+
+function updateAttackAnimations(now) {
+    for (
+        let i = attackAnimations.length - 1;
+        i >= 0;
+        i--
+    ) {
+        const a = attackAnimations[i];
+
+        const elapsed =
+            now - a.start;
+
+        const step =
+            Math.floor(elapsed / a.stepMs);
+
+        while (
+            a.lastStep < step &&
+            a.lastStep + 1 < a.tiles.length
+        ) {
+            a.lastStep++;
+
+            const tile =
+                a.tiles[a.lastStep];
+
+            if (a.onStep) {
+                a.onStep(
+                    tile,
+                    a.lastStep
+                );
+            }
+        }
+
+        if (
+            step >= a.tiles.length &&
+            !a.finished
+        ) {
+            a.finished = true;
+
+            if (a.onFinish)
+                a.onFinish();
+
+            attackAnimations.splice(
+                i,
+                1
+            );
+        }
+    }
+}
+
+function drawAttackAnimations(now) {
+    for (const a of attackAnimations) {
+        const elapsed =
+            now - a.start;
+
+        const position =
+            elapsed / a.stepMs;
+
+        const currentStep =
+            Math.floor(position);
+
+        for (
+            let t = 0;
+            t <= a.trail;
+            t++
+        ) {
+            const index =
+                currentStep - t;
+
+            if (
+                index < 0 ||
+                index >= a.tiles.length
+            ) continue;
+
+            const tile =
+                a.tiles[index];
+
+            if (isWall(tile.x, tile.y))
+                continue;
+
+            const fade =
+                1 - t / (a.trail + 1);
+
+            ctx.save();
+
+            ctx.globalAlpha =
+                0.75 * fade;
+
+            ctx.fillStyle =
+                weaponColors[a.type];
+
+            ctx.fillRect(
+                tile.x * tileW,
+                tile.y * tileH,
+                tileW,
+                tileH
+            );
+
+            ctx.restore();
+        }
+    }
+}
+
+function updateDaggerQueue(now) {
+    for (const e of enemies) {
+        const dx =
+            Math.abs(
+                e.x - player.x
+            );
+
+        const dy =
+            Math.abs(
+                e.y - player.y
+            );
+
+        const valid =
+            (dx === 1 && dy === 0) ||
+            (dx === 0 && dy === 1);
+
+        if (valid) {
+            if (
+                e.enteredDaggerAt ===
+                Infinity
+            ) {
+                e.enteredDaggerAt = now;
+            }
+        } else {
+            e.enteredDaggerAt =
+                Infinity;
+        }
+    }
+}
+
+const swordRing = [
+    { dx: 0,  dy: -1 },
+    { dx: 1,  dy: -1 },
+    { dx: 1,  dy: 0  },
+    { dx: 1,  dy: 1  },
+    { dx: 0,  dy: 1  },
+    { dx: -1, dy: 1  },
+    { dx: -1, dy: 0  },
+    { dx: -1, dy: -1 }
+];
+
+function swordAttack(now) {
+    if (now < cooldowns.sword)
+        return;
+
+    const adjacent =
+        enemies.filter(e =>
+            Math.abs(
+                e.x - player.x
+            ) <= 1 &&
+            Math.abs(
+                e.y - player.y
+            ) <= 1 &&
+            !(
+                e.x === player.x &&
+                e.y === player.y
+            )
+        );
+
+    if (!adjacent.length)
+        return;
+
+    let strongest =
+        adjacent[0];
+
+    for (const e of adjacent) {
+        if (e.hp > strongest.hp) {
+            strongest = e;
+        }
+    }
+
+    const startIndex =
+        swordRing.findIndex(p =>
+            player.x + p.dx ===
+                strongest.x &&
+            player.y + p.dy ===
+                strongest.y
+        );
+
+    const path = [];
+
+    for (let i = 0; i < 8; i++) {
+        const p =
+            swordRing[
+                (startIndex + i) % 8
+            ];
+
+        const x = player.x + p.dx;
+        const y = player.y + p.dy;
+
+        if (!isWall(x, y)) {
+            path.push({ x, y });
+        }
+    }
+
+    addAttackAnimation({
+        type: "sword",
+        tiles: path,
+        stepMs: 55,
+        trail: 2,
+
+        onStep(tile) {
+            const target =
+                enemyAt(
+                    tile.x,
+                    tile.y
+                );
+
+            if (target) {
+                damage(target, 1);
+            }
+        }
+    });
+
+    cooldowns.sword =
+        now + weaponDelay.sword;
+}
+
+function daggerAttack(now) {
+    if (now < cooldowns.dagger)
+        return;
+
+    const targets =
+        enemies
+            .filter(e => {
+                const dx =
+                    Math.abs(
+                        e.x - player.x
+                    );
+
+                const dy =
+                    Math.abs(
+                        e.y - player.y
+                    );
+
+                return (
+                    (dx === 1 &&
+                     dy === 0) ||
+                    (dx === 0 &&
+                     dy === 1)
+                );
+            })
+            .sort(
+                (a, b) =>
+                    a.enteredDaggerAt -
+                    b.enteredDaggerAt
+            );
+
+    if (!targets.length)
+        return;
+
+    const target =
+        targets[0];
+
+    addAttackAnimation({
+        type: "dagger",
+        tiles: [
+            {
+                x: target.x,
+                y: target.y
+            }
+        ],
+        stepMs: 90,
+        onStep() {
+            damage(target, 1);
+        }
+    });
+
+    cooldowns.dagger =
+        now + weaponDelay.dagger;
+}
+
+function spearAttack(now) {
+    if (now < cooldowns.spear)
+        return;
+
+    const dirs = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ];
+
+    for (const [dx, dy] of dirs) {
+        const middleX =
+            player.x + dx;
+
+        const middleY =
+            player.y + dy;
+
+        const targetX =
+            player.x + dx * 2;
+
+        const targetY =
+            player.y + dy * 2;
+
+        if (
+            isWall(middleX, middleY) ||
+            isWall(targetX, targetY)
+        ) {
+            continue;
+        }
+
+        if (
+            enemyAt(
+                middleX,
+                middleY
+            )
+        ) {
+            continue;
+        }
+
+        const target =
+            enemyAt(
+                targetX,
+                targetY
+            );
+
+        if (!target)
+            continue;
+
+        addAttackAnimation({
+            type: "spear",
+            tiles: [
+                {
+                    x: middleX,
+                    y: middleY
+                },
+                {
+                    x: targetX,
+                    y: targetY
+                }
+            ],
+            stepMs: 70,
+            trail: 1,
+            onStep(tile, index) {
+                if (index === 1) {
+                    damage(target, 2);
+                }
+            }
+        });
+
+        cooldowns.spear =
+            now + weaponDelay.spear;
+
+        return;
+    }
+}
+
+function bowAttack(now) {
+    if (now < cooldowns.bow)
+        return;
+
+    const dirs = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ];
+
+    for (const [dx, dy] of dirs) {
+        let x =
+            player.x + dx;
+
+        let y =
+            player.y + dy;
+
+        const path = [];
+
+        while (
+            x >= 0 &&
+            y >= 0 &&
+            x < COLS &&
+            y < ROWS
+        ) {
+            if (isWall(x, y))
+                break;
+
+            path.push({ x, y });
+
+            const target =
+                enemyAt(x, y);
+
+            if (target) {
+                addAttackAnimation({
+                    type: "bow",
+                    tiles: path,
+                    stepMs: 55,
+                    onStep(tile, index) {
+                        if (
+                            index ===
+                            path.length - 1
+                        ) {
+                            damage(
+                                target,
+                                1
+                            );
+                        }
+                    }
+                });
+
+                cooldowns.bow =
+                    now +
+                    weaponDelay.bow;
+
+                return;
+            }
+
+            x += dx;
+            y += dy;
+        }
+    }
+}
+
+function boomerangAttack(now) {
+    if (now < cooldowns.boom)
+        return;
+
+    const dirs = [
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+        [-1, -1]
+    ];
+
+    for (const [dx, dy] of dirs) {
+        let x =
+            player.x + dx;
+
+        let y =
+            player.y + dy;
+
+        const outward = [];
+
+        while (
+            x >= 0 &&
+            y >= 0 &&
+            x < COLS &&
+            y < ROWS
+        ) {
+            if (isWall(x, y))
+                break;
+
+            outward.push({ x, y });
+
+            const target =
+                enemyAt(x, y);
+
+            if (target) {
+                const returnPath =
+                    outward
+                        .slice(0, -1)
+                        .reverse();
+
+                const fullPath = [
+                    ...outward,
+                    ...returnPath
+                ];
+
+                addAttackAnimation({
+                    type: "boom",
+                    tiles: fullPath,
+                    stepMs: 70,
+                    trail: 1,
+                    onStep(tile, index) {
+                        if (
+                            index ===
+                            outward.length - 1
+                        ) {
+                            damage(
+                                target,
+                                2
+                            );
+                        }
+                    }
+                });
+
+                cooldowns.boom =
+                    now +
+                    weaponDelay.boom;
+
+                return;
+            }
+
+            x += dx;
+            y += dy;
+        }
+    }
+}
+
+function combat(now) {
+    updateDaggerQueue(now);
+
+    swordAttack(now);
+    daggerAttack(now);
+    spearAttack(now);
+    bowAttack(now);
+    boomerangAttack(now);
+
+    removeDead();
+}
+
+function movePlayer(dx, dy) {
+    const nx =
+        player.x + dx;
+
+    const ny =
+        player.y + dy;
+
+    if (
+        nx < 0 ||
+        ny < 0 ||
+        nx >= COLS ||
+        ny >= ROWS
+    ) return;
+
+    if (isWall(nx, ny))
+        return;
+
+    if (enemyAt(nx, ny))
+        return;
+
+    player.x = nx;
+    player.y = ny;
+}
+
+const keys = {};
+
+window.addEventListener(
+    "keydown",
+    e => {
+        keys[
+            e.key.toLowerCase()
+        ] = true;
+    }
+);
+
+window.addEventListener(
+    "keyup",
+    e => {
+        keys[
+            e.key.toLowerCase()
+        ] = false;
+    }
+);
+
+function keyboardMovement(now) {
+    if (
+        now <
+        player.moveCooldown
+    ) return;
+
+    let dx = 0;
+    let dy = 0;
+
+    if (
+        keys["arrowleft"] ||
+        keys["a"]
+    ) dx = -1;
+
+    if (
+        keys["arrowright"] ||
+        keys["d"]
+    ) dx = 1;
+
+    if (
+        keys["arrowup"] ||
+        keys["w"]
+    ) dy = -1;
+
+    if (
+        keys["arrowdown"] ||
+        keys["s"]
+    ) dy = 1;
+
+    if (dx || dy) {
+        movePlayer(dx, dy);
+
+        player.moveCooldown =
+            now + 110;
+    }
+}
+
+const stickBase =
+    document.getElementById(
+        "stickBase"
+    );
+
+const stick =
+    document.getElementById(
+        "stick"
+    );
+
+let stickPointer = null;
+let stickDX = 0;
+let stickDY = 0;
+
+stickBase.addEventListener(
+    "pointerdown",
+    e => {
+        stickPointer =
+            e.pointerId;
+
+        stickBase
+            .setPointerCapture(
+                e.pointerId
+            );
+
+        updateStick(e);
+    }
+);
+
+stickBase.addEventListener(
+    "pointermove",
+    e => {
+        if (
+            e.pointerId !==
+            stickPointer
+        ) return;
+
+        updateStick(e);
+    }
+);
+
+stickBase.addEventListener(
+    "pointerup",
+    e => {
+        if (
+            e.pointerId !==
+            stickPointer
+        ) return;
+
+        stickPointer = null;
+
+        stickDX = 0;
+        stickDY = 0;
+
+        stick.style.transform =
+            "translate(-50%, -50%)";
+    }
+);
+
+function updateStick(e) {
+    const r =
+        stickBase
+            .getBoundingClientRect();
+
+    let dx =
+        e.clientX -
+        (
+            r.left +
+            r.width / 2
+        );
+
+    let dy =
+        e.clientY -
+        (
+            r.top +
+            r.height / 2
+        );
+
+    const max = 42;
+
+    const len =
+        Math.hypot(dx, dy);
+
+    if (len > max) {
+        dx =
+            dx / len * max;
+
+        dy =
+            dy / len * max;
+    }
+
+    stickDX =
+        dx / max;
+
+    stickDY =
+        dy / max;
+
+    stick.style.transform =
+        `translate(
+            calc(-50% + ${dx}px),
+            calc(-50% + ${dy}px)
+        )`;
+}
+
+function touchMovement(now) {
+    if (
+        now <
+        player.moveCooldown
+    ) return;
+
+    if (
+        Math.abs(stickDX) < .3 &&
+        Math.abs(stickDY) < .3
+    ) return;
+
+    let dx = 0;
+    let dy = 0;
+
+    if (
+        Math.abs(stickDX) >
+        Math.abs(stickDY)
+    ) {
+        dx =
+            Math.sign(stickDX);
+    } else {
+        dy =
+            Math.sign(stickDY);
+    }
+
+    movePlayer(dx, dy);
+
+    player.moveCooldown =
+        now + 110;
+}
+
+function updateEnemies(now) {
+    if (!updateEnemies.last) {
+        updateEnemies.last = now;
+    }
+
+    if (
+        now -
+        updateEnemies.last <
+        700
+    ) {
+        return;
+    }
+
+    updateEnemies.last = now;
+
+    for (const e of enemies) {
+        if (
+            Math.random() > .55
+        ) continue;
+
+        let dx =
+            Math.sign(
+                player.x - e.x
+            );
+
+        let dy =
+            Math.sign(
+                player.y - e.y
+            );
+
+        if (
+            Math.random() < .5
+        ) {
+            dy = 0;
+        } else {
+            dx = 0;
+        }
+
+        const nx =
+            e.x + dx;
+
+        const ny =
+            e.y + dy;
+
+        if (
+            nx <= 1 ||
+            ny <= 1 ||
+            nx >= COLS - 2 ||
+            ny >= ROWS - 2
+        ) continue;
+
+        if (
+            nx === player.x &&
+            ny === player.y
+        ) continue;
+
+        if (!enemyAt(nx, ny)) {
+            e.x = nx;
+            e.y = ny;
+        }
+    }
+}
+
+function draw(now) {
+    const w =
+        canvas.clientWidth;
+
+    const h =
+        canvas.clientHeight;
+
+    ctx.clearRect(
+        0,
+        0,
+        w,
+        h
+    );
+
+    for (
+        let y = 0;
+        y < ROWS;
+        y++
+    ) {
+        for (
+            let x = 0;
+            x < COLS;
+            x++
+        ) {
+            const wall =
+                isWall(x, y);
+
+            const safe =
+                isSafeTile(x, y);
+
+            ctx.fillStyle =
+                wall
+                ? tilePalette.wall
+                : safe
+                ? tilePalette.safe
+                : tilePalette.floor;
+
+            ctx.fillRect(
+                x * tileW,
+                y * tileH,
+                tileW,
+                tileH
+            );
+
+            ctx.strokeStyle =
+                wall
+                ? tilePalette.wallGrid
+                : tilePalette.floorGrid;
+
+            ctx.strokeRect(
+                x * tileW,
+                y * tileH,
+                tileW,
+                tileH
+            );
+
+            if (wall) {
+                ctx.fillStyle = tilePalette.wallInset;
+                ctx.fillRect(
+                    x * tileW + tileW * 0.12,
+                    y * tileH + tileH * 0.12,
+                    tileW * 0.76,
+                    tileH * 0.76
+                );
+            }
+        }
+    }
+
+    drawAttackAnimations(now);
+
+    for (const e of enemies) {
+        const cx =
+            e.x * tileW +
+            tileW / 2;
+
+        const cy =
+            e.y * tileH +
+            tileH / 2;
+
+        const r =
+            Math.min(
+                tileW,
+                tileH
+            ) * .31;
+
+        ctx.fillStyle =
+            e.hp >= 4
+                ? "#c85b4a"
+                : e.hp >= 2
+                ? "#d98755"
+                : "#e1b56d";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            cx,
+            cy,
+            r,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+        ctx.fillStyle =
+            "#111";
+
+        ctx.font =
+            `${r}px monospace`;
+
+        ctx.textAlign =
+            "center";
+
+        ctx.textBaseline =
+            "middle";
+
+        ctx.fillText(
+            e.hp,
+            cx,
+            cy
+        );
+    }
+
+    const px =
+        player.x * tileW +
+        tileW / 2;
+
+    const py =
+        player.y * tileH +
+        tileH / 2;
+
+    ctx.fillStyle =
+        "#d8e8ff";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        px,
+        py,
+        Math.min(
+            tileW,
+            tileH
+        ) * .34,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.fillStyle =
+        "#111";
+
+    ctx.font =
+        `${
+            Math.min(
+                tileW,
+                tileH
+            ) * .35
+        }px monospace`;
+
+    ctx.textAlign =
+        "center";
+
+    ctx.textBaseline =
+        "middle";
+
+    ctx.fillText(
+        "@",
+        px,
+        py
+    );
+}
+
+function frame(now) {
+    keyboardMovement(now);
+    touchMovement(now);
+
+    updateEnemies(now);
+
+    combat(now);
+
+    updateAttackAnimations(now);
+
+    draw(now);
+
+    requestAnimationFrame(frame);
+}
+
+resize();
+requestAnimationFrame(frame);
