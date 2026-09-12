@@ -9,19 +9,53 @@ PHYLOGENE TODO
 1. Replace temporary prototype wall treatment with canonical Zelda-style full 32x32 tiles.
 2. Author and integrate the starting outdoor plains tileset under assets/tiles/plains/.
 3. [IN PROGRESS] Define the canonical tile registry in js/tiles.js with visual asset + gameplay properties.
-   - agreed boolean semantics: blocked:true means the tile blocks occupancy/movement; opaque:true means the tile blocks visibility.
-4. Define the canonical room format in js/room.js for both curated and procedural rooms.
-5. Build curated-room authoring/code format around the canonical tile grid.
-6. Add optional room reflection modes: none, horizontal, vertical, both.
-7. Add feature placement before final room validation.
-8. Add final reachability/interaction validation:
-   - every walkable tile reachable,
-   - every non-walkable interactive tile approachable/touchable,
+   - blocked:true means the tile blocks occupancy/movement.
+   - opaque:true means the tile blocks drone light/visibility.
+4. Replace the temporary 11x15 room with the canonical 32x32 room format in js/room.js.
+5. Build the authored first outdoor room:
+   - player starts at the bottom entrance,
+   - outer wall contains doorway gaps,
+   - doorway tiles are the only safe zone,
+   - no player/enemy attack may originate from, enter, pass through, target, or land on a doorway tile,
+   - normal door mark = unlocked; double-line door mark = locked.
+6. Implement drone visibility and persistent discovery:
+   - 360-degree light around player/drone,
+   - opaque tiles stop current visibility,
+   - visibleNow[1024] recalculated during exploration,
+   - discovered[1024] persists once a coordinate has been seen,
+   - discovered terrain remains painted in darkness,
+   - live enemies/items only render while currently visible.
+7. Implement the Unicode minimap directly from room terrain/discovery:
+   - ░ water,
+   - ▒ sand,
+   - ▓ grass,
+   - █ hedge,
+   - door state shown with normal vs double-line door mark.
+8. Implement player health/contact combat:
+   - player starts with exactly 3 hearts,
+   - enemies in any of the 8 touching tiles are in contact range,
+   - each player attack while in contact causes a simultaneous 1 health exchange with the adjacent enemy.
+9. Implement the first-room Skeleton progression encounter:
+   - exactly 8 skeletons,
+   - each drops one curated unique Skeleton genome piece,
+   - final skeleton carries the rarest/end chromosome,
+   - final skeleton difficulty comes from authored hiding-position geometry,
+   - final skeleton retreats to its hiding position instead of continuing to chase.
+10. Implement DNA economy:
+   - once at least one chromosome is collected, spare DNA auto-heals at 1 generic DNA per half-heart,
+   - complete species blueprint requires all 8 unique genome pieces,
+   - transformation into a completed species costs 8 generic DNA from any source,
+   - enemies respawn after a delay to support continued DNA hunting.
+11. Build the scrollable gene-sequence tracker between game screen and controls.
+12. Implement completed-genome selection and transformation flow.
+13. Add first transformation progression examples, including Skeleton / Skeleton Key and Cat / night vision.
+14. Build curated-room authoring/code format around the canonical 32x32 tile grid.
+15. Add optional room reflection modes: none, horizontal, vertical, both.
+16. Add feature placement before final room validation.
+17. Add final reachability/interaction validation:
+   - every traversable tile reachable,
+   - every blocked interactive tile approachable/touchable,
    - ranged-interaction features have at least one valid reachable lane,
    - intentionally unreachable areas require an explicit Metroidvania gate.
-9. Add room exits/doors and room-to-room transitions.
-10. Make enemies respawn when leaving and re-entering a room.
-11. Build the scrollable gene-sequence tracker between game screen and controls.
-12. Implement unique genome-fragment collection, duplicate-to-reserve-DNA conversion, completed genomes, and DNA-cost transformations.
-13. Add first transformation progression examples, including Skeleton / Skeleton Key and Cat / night vision.
-14. Continue playtesting and tuning positional auto-weapon rules from the one-room prototype.
+18. Add room exits/doors and room-to-room transitions.
+19. Continue playtesting and tuning positional auto-weapon rules from the one-room prototype.
