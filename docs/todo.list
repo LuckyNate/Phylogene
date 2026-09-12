@@ -2,16 +2,12 @@ PHYLOGENE TODO
 
 1. Replace temporary prototype wall treatment with canonical Zelda-style full 32x32 tiles.
 2. Author and integrate the starting outdoor plains tileset under assets/tiles/plains/.
-3. Define the canonical tile registry in js/tiles.js with visual asset + gameplay properties.
+3. IN PROGRESS — Define the canonical tile registry in js/tiles.js with visual asset + gameplay properties. Canonical booleans are now blocked and opaque; true means the property is present. Visual asset mapping and the full plains registry are still pending.
 4. Define the canonical room format in js/room.js for both curated and procedural rooms.
 5. Build curated-room authoring/code format around the canonical tile grid.
 6. Add optional room reflection modes: none, horizontal, vertical, both.
 7. Add feature placement before final room validation.
-8. Add final reachability/interaction validation:
-   - every walkable tile reachable,
-   - every non-walkable interactive tile approachable/touchable,
-   - ranged-interaction features have at least one valid reachable lane,
-   - intentionally unreachable areas require an explicit Metroidvania gate.
+8. Add final reachability/interaction validation.
 9. Add room exits/doors and room-to-room transitions.
 10. Make enemies respawn when leaving and re-entering a room.
 11. Build the scrollable gene-sequence tracker between game screen and controls.
