@@ -243,6 +243,27 @@ function resize() {
 
 window.addEventListener("resize", resize);
 
+function isWall(x, y) {
+    return (
+        x === 0 ||
+        y === 0 ||
+        x === COLS - 1 ||
+        y === ROWS - 1
+    );
+}
+
+function isSafeTile(x, y) {
+    return (
+        !isWall(x, y) &&
+        (
+            x === 1 ||
+            y === 1 ||
+            x === COLS - 2 ||
+            y === ROWS - 2
+        )
+    );
+}
+
 const player = {
     x: 5,
     y: 7,
@@ -261,13 +282,13 @@ function enemyAt(x, y) {
 function spawnEnemy() {
     for (let tries = 0; tries < 100; tries++) {
         const x =
-            1 + Math.floor(
-                Math.random() * (COLS - 2)
+            2 + Math.floor(
+                Math.random() * (COLS - 4)
             );
 
         const y =
-            1 + Math.floor(
-                Math.random() * (ROWS - 2)
+            2 + Math.floor(
+                Math.random() * (ROWS - 4)
             );
 
         if (
@@ -334,10 +355,6 @@ function flashWeapon(type) {
         el.classList.remove("fire");
     }, 120);
 }
-
-/* -----------------------------
-   ATTACK ANIMATION SYSTEM
------------------------------- */
 
 const attackAnimations = [];
 
@@ -439,6 +456,9 @@ function drawAttackAnimations(now) {
             const tile =
                 a.tiles[index];
 
+            if (isWall(tile.x, tile.y))
+                continue;
+
             const fade =
                 1 - t / (a.trail + 1);
 
@@ -461,10 +481,6 @@ function drawAttackAnimations(now) {
         }
     }
 }
-
-/* -----------------------------
-   DAGGER QUEUE
------------------------------- */
 
 function updateDaggerQueue(now) {
     for (const e of enemies) {
@@ -495,10 +511,6 @@ function updateDaggerQueue(now) {
         }
     }
 }
-
-/* -----------------------------
-   SWORD
------------------------------- */
 
 const swordRing = [
     { dx: 0,  dy: -1 },
@@ -557,10 +569,12 @@ function swordAttack(now) {
                 (startIndex + i) % 8
             ];
 
-        path.push({
-            x: player.x + p.dx,
-            y: player.y + p.dy
-        });
+        const x = player.x + p.dx;
+        const y = player.y + p.dy;
+
+        if (!isWall(x, y)) {
+            path.push({ x, y });
+        }
     }
 
     addAttackAnimation({
@@ -585,10 +599,6 @@ function swordAttack(now) {
     cooldowns.sword =
         now + weaponDelay.sword;
 }
-
-/* -----------------------------
-   DAGGER
------------------------------- */
 
 function daggerAttack(now) {
     if (now < cooldowns.dagger)
@@ -647,10 +657,6 @@ function daggerAttack(now) {
         now + weaponDelay.dagger;
 }
 
-/* -----------------------------
-   SPEAR
------------------------------- */
-
 function spearAttack(now) {
     if (now < cooldowns.spear)
         return;
@@ -674,6 +680,13 @@ function spearAttack(now) {
 
         const targetY =
             player.y + dy * 2;
+
+        if (
+            isWall(middleX, middleY) ||
+            isWall(targetX, targetY)
+        ) {
+            continue;
+        }
 
         if (
             enemyAt(
@@ -724,10 +737,6 @@ function spearAttack(now) {
     }
 }
 
-/* -----------------------------
-   BOW
------------------------------- */
-
 function bowAttack(now) {
     if (now < cooldowns.bow)
         return;
@@ -749,11 +758,14 @@ function bowAttack(now) {
         const path = [];
 
         while (
-            x > 0 &&
-            y > 0 &&
-            x < COLS - 1 &&
-            y < ROWS - 1
+            x >= 0 &&
+            y >= 0 &&
+            x < COLS &&
+            y < ROWS
         ) {
+            if (isWall(x, y))
+                break;
+
             path.push({ x, y });
 
             const target =
@@ -794,10 +806,6 @@ function bowAttack(now) {
     }
 }
 
-/* -----------------------------
-   BOOMERANG
------------------------------- */
-
 function boomerangAttack(now) {
     if (now < cooldowns.boom)
         return;
@@ -819,11 +827,14 @@ function boomerangAttack(now) {
         const outward = [];
 
         while (
-            x > 0 &&
-            y > 0 &&
-            x < COLS - 1 &&
-            y < ROWS - 1
+            x >= 0 &&
+            y >= 0 &&
+            x < COLS &&
+            y < ROWS
         ) {
+            if (isWall(x, y))
+                break;
+
             outward.push({ x, y });
 
             const target =
@@ -875,10 +886,6 @@ function boomerangAttack(now) {
     }
 }
 
-/* -----------------------------
-   COMBAT
------------------------------- */
-
 function combat(now) {
     updateDaggerQueue(now);
 
@@ -890,10 +897,6 @@ function combat(now) {
 
     removeDead();
 }
-
-/* -----------------------------
-   PLAYER MOVEMENT
------------------------------- */
 
 function movePlayer(dx, dy) {
     const nx =
@@ -909,16 +912,15 @@ function movePlayer(dx, dy) {
         ny >= ROWS
     ) return;
 
+    if (isWall(nx, ny))
+        return;
+
     if (enemyAt(nx, ny))
         return;
 
     player.x = nx;
     player.y = ny;
 }
-
-/* -----------------------------
-   KEYBOARD
------------------------------- */
 
 const keys = {};
 
@@ -976,10 +978,6 @@ function keyboardMovement(now) {
             now + 110;
     }
 }
-
-/* -----------------------------
-   TOUCH STICK
------------------------------- */
 
 const stickBase =
     document.getElementById(
@@ -1116,10 +1114,6 @@ function touchMovement(now) {
         now + 110;
 }
 
-/* -----------------------------
-   ENEMIES
------------------------------- */
-
 function updateEnemies(now) {
     if (!updateEnemies.last) {
         updateEnemies.last = now;
@@ -1165,10 +1159,10 @@ function updateEnemies(now) {
             e.y + dy;
 
         if (
-            nx <= 0 ||
-            ny <= 0 ||
-            nx >= COLS - 1 ||
-            ny >= ROWS - 1
+            nx <= 1 ||
+            ny <= 1 ||
+            nx >= COLS - 2 ||
+            ny >= ROWS - 2
         ) continue;
 
         if (
@@ -1182,10 +1176,6 @@ function updateEnemies(now) {
         }
     }
 }
-
-/* -----------------------------
-   DRAW
------------------------------- */
 
 function draw(now) {
     const w =
@@ -1211,14 +1201,16 @@ function draw(now) {
             x < COLS;
             x++
         ) {
+            const wall =
+                isWall(x, y);
+
             const safe =
-                x === 0 ||
-                y === 0 ||
-                x === COLS - 1 ||
-                y === ROWS - 1;
+                isSafeTile(x, y);
 
             ctx.fillStyle =
-                safe
+                wall
+                ? "#202226"
+                : safe
                 ? "#263126"
                 : "#324331";
 
@@ -1230,7 +1222,9 @@ function draw(now) {
             );
 
             ctx.strokeStyle =
-                "#425342";
+                wall
+                ? "#4a4d54"
+                : "#425342";
 
             ctx.strokeRect(
                 x * tileW,
@@ -1238,6 +1232,16 @@ function draw(now) {
                 tileW,
                 tileH
             );
+
+            if (wall) {
+                ctx.fillStyle = "#30333a";
+                ctx.fillRect(
+                    x * tileW + tileW * 0.12,
+                    y * tileH + tileH * 0.12,
+                    tileW * 0.76,
+                    tileH * 0.76
+                );
+            }
         }
     }
 
@@ -1345,10 +1349,6 @@ function draw(now) {
         py
     );
 }
-
-/* -----------------------------
-   LOOP
------------------------------- */
 
 function frame(now) {
     keyboardMovement(now);
