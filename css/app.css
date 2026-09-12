@@ -1,0 +1,126 @@
+* {
+    box-sizing: border-box;
+    touch-action: none;
+    user-select: none;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #111;
+    font-family: monospace;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+}
+
+#app {
+    width: min(100vw, 540px);
+    height: 100dvh;
+    display: grid;
+    grid-template-rows:
+        calc(34px + env(safe-area-inset-top))
+        1fr
+        90px
+        190px;
+    background: #181818;
+}
+
+#titlebar {
+    padding-top: env(safe-area-inset-top);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #202020;
+    color: #ddd;
+    font-weight: bold;
+    letter-spacing: 4px;
+}
+
+#gameWrap {
+    position: relative;
+    min-height: 0;
+    background: #000;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+}
+
+#weapons {
+    padding: 7px;
+    overflow-x: auto;
+    white-space: nowrap;
+    background: #161616;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+}
+
+.weapon {
+    display: inline-block;
+    vertical-align: top;
+    min-width: 105px;
+    height: 70px;
+    margin-right: 5px;
+    padding: 7px;
+    background: #252525;
+    border: 2px solid var(--weapon-color);
+    color: #aaa;
+    font-size: 11px;
+}
+
+.weapon strong {
+    display: block;
+    color: var(--weapon-color);
+    margin-bottom: 4px;
+}
+
+.weapon.fire {
+    background: color-mix(
+        in srgb,
+        var(--weapon-color) 30%,
+        #222
+    );
+}
+
+#controls {
+    position: relative;
+    background: #202020;
+}
+
+#stickBase {
+    position: absolute;
+    width: 132px;
+    height: 132px;
+    border: 2px solid #666;
+    border-radius: 50%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#stick {
+    position: absolute;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: #888;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#status {
+    position: absolute;
+    left: 8px;
+    top: 7px;
+    color: #aaa;
+    font-size: 11px;
+}
