@@ -6,6 +6,33 @@ Phylogene is a portrait-first, top-down action exploration game combining Zelda-
 
 The player directly controls movement. Weapons fire automatically when their spatial rules are satisfied.
 
+## World Scale
+
+Phylogene has two distinct spatial scales.
+
+### World Map
+
+- The world map is a coarse Unicode atlas.
+- Each world-map glyph represents one complete local room.
+- Current prototype world size: 32 rooms wide x 64 rooms high.
+- The glyph communicates macro terrain/biome/elevation, not local-room walls or doorways.
+- Current grammar:
+  - `░` water
+  - `▒` sand / lowland
+  - `▓` grass / plains
+  - `█` high elevation
+  - `@` forest
+  - `#` urban / dense settlement
+- World-map glyphs are rendered into square cells so the atlas preserves useful scale and shape instead of inheriting a monospace font's rectangular character proportions.
+- The current prototype island uses a GTA-V-like north/south landmass layout only as a world-shape study.
+- The player starts on the west-coast beach just north of the pier analogue.
+
+### Local Rooms
+
+- Each world-map cell expands into one playable 32x32 local room.
+- Local walls, doors, locked exits, enemies, features, loot, visibility, and traversal rules exist only inside the room.
+- Door symbols are not part of the world-map grammar.
+
 ## Player Health and Contact Combat
 
 - The player starts with exactly 3 hearts.
@@ -46,7 +73,7 @@ The game begins at the bottom entrance of the first 32x32 room.
 
 - Canonical room size: 32x32 tiles.
 - Canonical source tile size: 32x32 pixels.
-- Outdoor starting biome: plains.
+- Outdoor starting biome: plains/beach transition.
 - Walls and other blockers are full tiles, Zelda-style.
 - Canonical tile booleans use positive property semantics:
   - `blocked: true` means the tile blocks occupancy/movement.
@@ -59,14 +86,14 @@ The game begins at the bottom entrance of the first 32x32 room.
 
 ## Doors and Safety
 
-- Doorways are literal gaps in the outer wall.
+- Doorways are literal gaps in the local room's outer wall.
 - The doorway tiles themselves are the only safe zone.
 - Neither player nor enemies may attack from a doorway tile.
 - Attacks may not target, enter, pass through, or land on a doorway tile.
 - Movement through the doorway remains allowed for room transitions.
-- The minimap uses the normal door mark for unlocked and the double-line door mark for locked.
+- Local room UI may distinguish unlocked and locked doors, but door state is a room feature rather than a world-map terrain glyph.
 
-## Visibility, Drone, and Mapping
+## Visibility, Drone, and Local Mapping
 
 The player's AI companion is a hovering drone with a strong 360-degree light.
 
@@ -78,20 +105,7 @@ The player's AI companion is a hovering drone with a strong 360-degree light.
 - Runtime visibility can be represented by two 32x32 boolean maps: `visibleNow` and persistent `discovered`.
 - `visibleNow` is recalculated as the player moves.
 - `discovered` only changes from false to true.
-- The remembered terrain is the in-world map: once the drone has scanned a wall or terrain tile, it stays painted on screen even after leaving current visibility.
-
-## Unicode Minimap Grammar
-
-The minimap is a direct compressed rendering of the same room grid rather than a separate approximation.
-
-- `░` water
-- `▒` sand
-- `▓` grass
-- `█` hedge
-- normal door mark = unlocked doorway
-- double-line door mark = locked doorway
-
-The same 32x32 terrain data drives both gameplay and the minimap.
+- Remembered terrain stays painted directly in local screen space; it is distinct from the Unicode world map.
 
 ## Combat Grammar
 
