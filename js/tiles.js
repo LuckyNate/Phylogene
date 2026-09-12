@@ -6,3 +6,30 @@ const tilePalette = {
     floor: "#324331",
     floorGrid: "#425342"
 };
+
+const tileTypes = {
+    floor: {
+        blocked: false,
+        opaque: false
+    },
+
+    safe: {
+        blocked: false,
+        opaque: false
+    },
+
+    wall: {
+        blocked: true,
+        opaque: true
+    },
+
+    deepWater: {
+        blocked: true,
+        opaque: false
+    },
+
+    pit: {
+        blocked: true,
+        opaque: false
+    }
+};
