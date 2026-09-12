@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Phylogene World Map Preview</title>
+<style>
+* { box-sizing: border-box; }
+html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #101214;
+    color: #e9ecef;
+    font-family: monospace;
+}
+body {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+}
+main {
+    width: min(100%, 420px);
+}
+h1 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+p {
+    margin: 0 0 12px;
+    color: #aeb5bc;
+    font-size: 12px;
+    line-height: 1.45;
+}
+#mapWrap {
+    width: 100%;
+    overflow: auto;
+    border: 1px solid #343a40;
+    background: #050607;
+}
+#worldMap {
+    display: block;
+    margin: 0 auto;
+    image-rendering: pixelated;
+}
+#legend {
+    margin-top: 12px;
+    white-space: pre-wrap;
+    font-size: 12px;
+    line-height: 1.5;
+}
+</style>
+</head>
+<body>
+<main>
+    <h1>PHYLOGENE WORLD MAP</h1>
+    <p>32 rooms wide × 64 rooms high. Every square glyph is one complete 32×32 local room. Red ring marks the starting beach room.</p>
+    <div id="mapWrap">
+        <canvas id="worldMap" aria-label="Phylogene world map preview"></canvas>
+    </div>
+    <div id="legend">░ water   ▒ sand/lowland   ▓ grass/plains
+█ high elevation   @ forest   # urban</div>
+</main>
+<script src="js/worldmap.js"></script>
+<script>
+const canvas = document.getElementById("worldMap");
+const wrap = document.getElementById("mapWrap");
+
+function render() {
+    const available = Math.max(192, Math.min(384, wrap.clientWidth));
+    const cellSize = Math.max(6, Math.floor(available / WORLD_MAP_WIDTH));
+    drawWorldMap(canvas, { cellSize });
+}
+
+window.addEventListener("resize", render);
+render();
+</script>
+</body>
+</html>
