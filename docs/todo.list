@@ -18,19 +18,22 @@ PHYLOGENE TODO
    - doorway tiles are the only safe zone,
    - no player/enemy attack may originate from, enter, pass through, target, or land on a doorway tile,
    - normal door mark = unlocked; double-line door mark = locked.
-6. Implement drone visibility and persistent discovery:
+6. Implement drone visibility and persistent local discovery:
    - 360-degree light around player/drone,
    - opaque tiles stop current visibility,
    - visibleNow[1024] recalculated during exploration,
    - discovered[1024] persists once a coordinate has been seen,
-   - discovered terrain remains painted in darkness,
+   - discovered terrain remains painted in darkness in local screen space,
    - live enemies/items only render while currently visible.
-7. Implement the Unicode minimap directly from room terrain/discovery:
-   - ░ water,
-   - ▒ sand,
-   - ▓ grass,
-   - █ hedge,
-   - door state shown with normal vs double-line door mark.
+7. [DONE] Establish the macro world-map prototype:
+   - 32 rooms wide x 64 rooms high,
+   - one Unicode glyph = one complete 32x32 local room,
+   - square-cell canvas rendering so glyphs preserve map scale,
+   - glyphs encode macro biome/elevation only,
+   - ░ water, ▒ sand/lowland, ▓ grass/plains, █ high elevation, @ forest, # urban,
+   - world start is on the west-coast beach just north of the pier analogue,
+   - standalone preview in worldmap-preview.html,
+   - local doorways/locked exits remain room features and are not world-map glyphs.
 8. Implement player health/contact combat:
    - player starts with exactly 3 hearts,
    - enemies in any of the 8 touching tiles are in contact range,
@@ -57,5 +60,6 @@ PHYLOGENE TODO
    - every blocked interactive tile approachable/touchable,
    - ranged-interaction features have at least one valid reachable lane,
    - intentionally unreachable areas require an explicit Metroidvania gate.
-18. Add room exits/doors and room-to-room transitions.
-19. Continue playtesting and tuning positional auto-weapon rules from the one-room prototype.
+18. Add local room exits/doors and room-to-room transitions across the macro world grid.
+19. Integrate the world map into the main game UI/navigation after the canonical local-room model is in place.
+20. Continue playtesting and tuning positional auto-weapon rules from the one-room prototype.
